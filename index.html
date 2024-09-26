@@ -11,6 +11,11 @@
             margin: 0 auto;
             padding: 20px;
         }
+        #questionNumber {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
         #question {
             font-size: 1.2em;
             margin-bottom: 20px;
@@ -24,6 +29,7 @@
             padding: 10px;
             font-size: 1em;
             cursor: pointer;
+            text-align: left;
         }
         #result {
             margin-top: 20px;
@@ -38,10 +44,19 @@
             justify-content: space-between;
             margin-top: 20px;
         }
+        #voiceStatus {
+            margin-top: 20px;
+            font-style: italic;
+        }
+        .option-letter {
+            font-weight: bold;
+            margin-right: 10px;
+        }
     </style>
 </head>
 <body>
     <h1>香港基本法測驗</h1>
+    <div id="questionNumber"></div>
     <div id="question"></div>
     <div id="options"></div>
     <div id="result"></div>
@@ -50,12 +65,18 @@
         <button id="prev" style="display:none;">上一題</button>
         <button id="next" style="display:none;">下一題</button>
     </div>
+    <div id="voiceControl">
+        <button id="startVoice">開始語音控制</button>
+        <button id="stopVoice" style="display:none;">停止語音控制</button>
+    </div>
+    <div id="voiceStatus"></div>
 
     <script>
         let quizData;
         let currentQuestion = 0;
         let score = 0;
         let userAnswers = [];
+        let recognition;
 
         // Load quiz data from JSON file
         fetch('quiz_data.json')
@@ -68,19 +89,23 @@
 
         function loadQuestion() {
             const question = quizData.questions[currentQuestion];
+            document.getElementById('questionNumber').textContent = `問題 ${currentQuestion + 1} / ${quizData.questions.length}`;
             document.getElementById('question').textContent = question.question;
             
             const optionsDiv = document.getElementById('options');
             optionsDiv.innerHTML = '';
+            const letters = ['A', 'B', 'C', 'D'];
             question.options.forEach((option, index) => {
                 const button = document.createElement('button');
-                button.textContent = option;
+                button.innerHTML = `<span class="option-letter">${letters[index]}.</span> ${option}`;
                 button.onclick = () => checkAnswer(index);
-                if (userAnswers[currentQuestion] !== undefined) {
+                if (userAnswers[currentQuestion] === question.correctAnswer) {
                     button.disabled = true;
                     if (index === userAnswers[currentQuestion]) {
-                        button.style.backgroundColor = 'lightblue';
+                        button.style.backgroundColor = 'lightgreen';
                     }
+                } else if (userAnswers[currentQuestion] !== undefined && index === userAnswers[currentQuestion]) {
+                    button.style.backgroundColor = 'lightgray';
                 }
                 optionsDiv.appendChild(button);
             });
@@ -102,16 +127,26 @@
         function showResult(selectedIndex) {
             const question = quizData.questions[currentQuestion];
             const resultDiv = document.getElementById('result');
+            const letters = ['A', 'B', 'C', 'D'];
             
             if (selectedIndex === question.correctAnswer) {
-                resultDiv.textContent = '正確!';
+                resultDiv.innerHTML = `你的答案: <strong>${letters[selectedIndex]}</strong>. 正確!`;
                 resultDiv.style.color = 'green';
+                document.querySelectorAll('#options button').forEach((button, index) => {
+                    button.disabled = true;
+                    if (index === selectedIndex) {
+                        button.style.backgroundColor = 'lightgreen';
+                    }
+                });
             } else {
-                resultDiv.textContent = `錯誤。正確答案是: ${question.options[question.correctAnswer]}`;
-                resultDiv.style.color = 'red';
+                resultDiv.innerHTML = `你的答案: <strong>${letters[selectedIndex]}</strong>. 請再試一次。`;
+                resultDiv.style.color = 'black';
+                document.querySelectorAll('#options button').forEach((button, index) => {
+                    if (index === selectedIndex) {
+                        button.style.backgroundColor = 'lightgray';
+                    }
+                });
             }
-
-            document.querySelectorAll('#options button').forEach(button => button.disabled = true);
         }
 
         document.getElementById('next').onclick = () => {
@@ -134,12 +169,63 @@
             score = userAnswers.reduce((total, answer, index) => 
                 total + (answer === quizData.questions[index].correctAnswer ? 1 : 0), 0);
             const totalQuestions = quizData.questions.length;
+            document.getElementById('questionNumber').textContent = '';
             document.getElementById('question').textContent = '測驗結束!';
             document.getElementById('options').innerHTML = '';
             document.getElementById('result').textContent = '';
             document.getElementById('navigation').style.display = 'none';
             document.getElementById('score').textContent = `你的分數: ${score} / ${totalQuestions}`;
         }
+
+        // Initialize speech recognition
+        function initSpeechRecognition() {
+            window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'zh-HK'; // Set language to Hong Kong Chinese
+            recognition.continuous = true;
+            recognition.interimResults = false;
+
+            recognition.onresult = function(event) {
+                const last = event.results.length - 1;
+                const command = event.results[last][0].transcript.trim().toUpperCase();
+
+                document.getElementById('voiceStatus').textContent = `語音命令: ${command}`;
+
+                if (['A', 'B', 'C', 'D', '1', '2', '3', '4'].includes(command)) {
+                    let index;
+                    if (['A', 'B', 'C', 'D'].includes(command)) {
+                        index = ['A', 'B', 'C', 'D'].indexOf(command);
+                    } else {
+                        index = parseInt(command) - 1;
+                    }
+                    checkAnswer(index);
+                } else if (command === '上一題' || command === '上一個') {
+                    document.getElementById('prev').click();
+                } else if (command === '下一題' || command === '下一個') {
+                    document.getElementById('next').click();
+                }
+            };
+
+            recognition.onerror = function(event) {
+                console.error('Speech recognition error', event.error);
+                document.getElementById('voiceStatus').textContent = `語音識別錯誤: ${event.error}`;
+            };
+        }
+
+        document.getElementById('startVoice').addEventListener('click', function() {
+            initSpeechRecognition();
+            recognition.start();
+            this.style.display = 'none';
+            document.getElementById('stopVoice').style.display = 'inline-block';
+            document.getElementById('voiceStatus').textContent = '語音控制已啟動';
+        });
+
+        document.getElementById('stopVoice').addEventListener('click', function() {
+            recognition.stop();
+            this.style.display = 'none';
+            document.getElementById('startVoice').style.display = 'inline-block';
+            document.getElementById('voiceStatus').textContent = '語音控制已停止';
+        });
     </script>
 </body>
 </html>
