@@ -44,6 +44,13 @@
             justify-content: space-between;
             margin-top: 20px;
         }
+        #prev {
+            order: 1;
+        }
+        #next {
+            order: 2;
+            margin-left: auto;
+        }
         #voiceStatus {
             margin-top: 20px;
             font-style: italic;
@@ -52,10 +59,31 @@
             font-weight: bold;
             margin-right: 10px;
         }
+        #questionSelect {
+            margin-bottom: 20px;
+        }
+        #jumpToQuestion {
+            padding: 5px;
+            font-size: 1em;
+        }
+        #orderToggle {
+            margin-bottom: 10px;
+        }
+        #randomOrder {
+            margin-left: 10px;
+        }
     </style>
 </head>
 <body>
     <h1>香港基本法測驗</h1>
+    <div id="orderToggle">
+        <label for="randomOrder">隨機順序:</label>
+        <input type="checkbox" id="randomOrder">
+    </div>
+    <div id="questionSelect">
+        <label for="jumpToQuestion">跳至問題: </label>
+        <select id="jumpToQuestion"></select>
+    </div>
     <div id="questionNumber"></div>
     <div id="question"></div>
     <div id="options"></div>
@@ -77,19 +105,57 @@
         let score = 0;
         let userAnswers = [];
         let recognition;
+        let questionOrder = [];
 
         // Load quiz data from JSON file
         fetch('quiz_data.json')
             .then(response => response.json())
             .then(data => {
                 quizData = data;
+                initializeQuestionOrder();
                 loadQuestion();
+                populateQuestionSelect();
             })
             .catch(error => console.error('Error loading quiz data:', error));
 
+        // Add this new function
+        function initializeQuestionOrder() {
+            questionOrder = Array.from(Array(quizData.questions.length).keys());
+            if (document.getElementById('randomOrder').checked) {
+                shuffleArray(questionOrder);
+            }
+        }
+
+        // Add this new function
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        // Modify the populateQuestionSelect function
+        function populateQuestionSelect() {
+            const select = document.getElementById('jumpToQuestion');
+            select.innerHTML = ''; // Clear existing options
+            for (let i = 0; i < questionOrder.length; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = `問題 ${questionOrder[i] + 1}`;
+                select.appendChild(option);
+            }
+            select.value = currentQuestion;
+            select.addEventListener('change', (e) => {
+                currentQuestion = parseInt(e.target.value);
+                loadQuestion();
+            });
+        }
+
+        // Modify the loadQuestion function
         function loadQuestion() {
-            const question = quizData.questions[currentQuestion];
-            document.getElementById('questionNumber').textContent = `問題 ${currentQuestion + 1} / ${quizData.questions.length}`;
+            const questionIndex = questionOrder[currentQuestion];
+            const question = quizData.questions[questionIndex];
+            document.getElementById('questionNumber').textContent = `問題 ${questionIndex + 1} / ${quizData.questions.length}`;
             document.getElementById('question').textContent = question.question;
             
             const optionsDiv = document.getElementById('options');
@@ -117,7 +183,18 @@
             if (userAnswers[currentQuestion] !== undefined) {
                 showResult(userAnswers[currentQuestion]);
             }
+
+            // Add this line at the end of the function
+            document.getElementById('jumpToQuestion').value = currentQuestion;
         }
+
+        // Add this new event listener
+        document.getElementById('randomOrder').addEventListener('change', (e) => {
+            initializeQuestionOrder();
+            currentQuestion = 0;
+            loadQuestion();
+            populateQuestionSelect();
+        });
 
         function checkAnswer(selectedIndex) {
             userAnswers[currentQuestion] = selectedIndex;
@@ -131,6 +208,9 @@
             
             if (selectedIndex === question.correctAnswer) {
                 resultDiv.innerHTML = `你的答案: <strong>${letters[selectedIndex]}</strong>. 正確!`;
+                if (question.explanation) {
+                    resultDiv.innerHTML += `<br><br>解釋: ${question.explanation}`;
+                }
                 resultDiv.style.color = 'green';
                 document.querySelectorAll('#options button').forEach((button, index) => {
                     button.disabled = true;
@@ -199,9 +279,9 @@
                         index = parseInt(command) - 1;
                     }
                     checkAnswer(index);
-                } else if (command === '上一題' || command === '上一個') {
+                } else if (['上一題', '上一個', '上題', '前一題', '返回'].includes(command)) {
                     document.getElementById('prev').click();
-                } else if (command === '下一題' || command === '下一個') {
+                } else if (['下一題', '下一個', '下題', '下一步', '繼續'].includes(command)) {
                     document.getElementById('next').click();
                 }
             };
