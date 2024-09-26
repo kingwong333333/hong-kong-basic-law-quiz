@@ -58,7 +58,7 @@
         let userAnswers = [];
 
         // Load quiz data from JSON file
-        fetch('/quiz_data.json')
+        fetch('quiz_data.json')
             .then(response => response.json())
             .then(data => {
                 quizData = data;
