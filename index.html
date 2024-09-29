@@ -3,13 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>香港基本法測驗 - 在線互動式測試</title>
-    <meta name="description" content="免費在線香港基本法測驗。通過互動式問答提高您對香港基本法的理解。包含語音控制功能。">
-    <meta name="keywords" content="香港基本法, 測驗, 在線測試, 互動式學習, 語音控制">
+    <title>香港基本法測驗</title>
     <meta name="google-site-verification" content="tCqRZim6w5LWHEyVLtOXo2luVJp9j9INFB188Ala73g" />
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2137466363023201"
      crossorigin="anonymous"></script>
-    <link rel="canonical" href="https://kingwong333333.github.io/">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -79,22 +76,32 @@
             margin-left: 10px;
         }
         .disclaimer {
-            margin-top: 40px;
-            padding: 20px;
             background-color: #f8f8f8;
             border: 1px solid #ddd;
             border-radius: 5px;
+            padding: 15px;
+            margin-top: 20px;
+            font-size: 0.9em;
         }
         .disclaimer h3 {
             margin-top: 0;
+            color: #333;
         }
-        .disclaimer ul {
-            padding-left: 20px;
+        #voiceControl {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        #voiceControl button {
+            padding: 10px;
+            font-size: 1em;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
     <h1>香港基本法測驗</h1>
+    
     <div id="orderToggle">
         <label for="randomOrder">隨機順序:</label>
         <input type="checkbox" id="randomOrder">
@@ -115,28 +122,217 @@
     <div id="voiceControl">
         <button id="startVoice">開始語音控制</button>
         <button id="stopVoice" style="display:none;">停止語音控制</button>
+        <button id="disclaimerButton" onclick="window.location.href='disclaimer.html'">免責聲明</button>
     </div>
     <div id="voiceStatus"></div>
 
-    <div class="disclaimer">
-        <h3>免責聲明</h3>
-        <p>
-            本網站/應用程式提供的《基本法》和《國家安全法》測驗題目僅供教育和學習目的使用。請注意以下重要事項：
-        </p>
-        <ul>
-            <li>本網站/應用程式與香港特別行政區政府無關，亦非由政府認可或贊助。</li>
-            <li>此處提供的測驗題目並非官方的《基本法》和《國家安全法》測試（BLNST）題目，不應被視為官方考試的替代品。</li>
-            <li>我們努力確保所有資訊的準確性，但不對其完整性或時效性作出保證。使用者應以政府發布的官方資料為準。</li>
-            <li>本網站/應用程式的目的是協助使用者學習和理解《基本法》和《國家安全法》的內容，不應被視為法律建議或官方指引。</li>
-            <li>如需準確和最新的資訊，請參考香港特別行政區政府的官方網站和資源。</li>
-        </ul>
-        <p>
-            使用本網站/應用程式即表示您同意並接受以上免責聲明的所有條款。
-        </p>
-    </div>
-
     <script>
-        // ... 保持原有的 JavaScript 代碼 ...
+        let quizData;
+        let currentQuestion = 0;
+        let score = 0;
+        let userAnswers = [];
+        let recognition;
+        let questionOrder = [];
+
+        // Load quiz data from JSON file
+        fetch('quiz_data.json')
+            .then(response => response.json())
+            .then(data => {
+                quizData = data;
+                initializeQuestionOrder();
+                loadQuestion();
+                populateQuestionSelect();
+            })
+            .catch(error => console.error('Error loading quiz data:', error));
+
+        // Add this new function
+        function initializeQuestionOrder() {
+            questionOrder = Array.from(Array(quizData.questions.length).keys());
+            if (document.getElementById('randomOrder').checked) {
+                shuffleArray(questionOrder);
+            }
+        }
+
+        // Add this new function
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        // Modify the populateQuestionSelect function
+        function populateQuestionSelect() {
+            const select = document.getElementById('jumpToQuestion');
+            select.innerHTML = ''; // Clear existing options
+            for (let i = 0; i < questionOrder.length; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = `問題 ${questionOrder[i] + 1}`;
+                select.appendChild(option);
+            }
+            select.value = currentQuestion;
+            select.addEventListener('change', (e) => {
+                currentQuestion = parseInt(e.target.value);
+                loadQuestion();
+            });
+        }
+
+        // Modify the loadQuestion function
+        function loadQuestion() {
+            const questionIndex = questionOrder[currentQuestion];
+            const question = quizData.questions[questionIndex];
+            document.getElementById('questionNumber').textContent = `問題 ${questionIndex + 1} / ${quizData.questions.length}`;
+            document.getElementById('question').textContent = question.question;
+            
+            const optionsDiv = document.getElementById('options');
+            optionsDiv.innerHTML = '';
+            const letters = ['A', 'B', 'C', 'D'];
+            question.options.forEach((option, index) => {
+                const button = document.createElement('button');
+                button.innerHTML = `<span class="option-letter">${letters[index]}.</span> ${option}`;
+                button.onclick = () => checkAnswer(index);
+                if (userAnswers[currentQuestion] === question.correctAnswer) {
+                    button.disabled = true;
+                    if (index === userAnswers[currentQuestion]) {
+                        button.style.backgroundColor = 'lightgreen';
+                    }
+                } else if (userAnswers[currentQuestion] !== undefined && index === userAnswers[currentQuestion]) {
+                    button.style.backgroundColor = 'lightgray';
+                }
+                optionsDiv.appendChild(button);
+            });
+
+            document.getElementById('result').textContent = '';
+            document.getElementById('next').style.display = currentQuestion < quizData.questions.length - 1 ? 'block' : 'none';
+            document.getElementById('prev').style.display = currentQuestion > 0 ? 'block' : 'none';
+
+            if (userAnswers[currentQuestion] !== undefined) {
+                showResult(userAnswers[currentQuestion]);
+            }
+
+            // Add this line at the end of the function
+            document.getElementById('jumpToQuestion').value = currentQuestion;
+        }
+
+        // Add this new event listener
+        document.getElementById('randomOrder').addEventListener('change', (e) => {
+            initializeQuestionOrder();
+            currentQuestion = 0;
+            loadQuestion();
+            populateQuestionSelect();
+        });
+
+        function checkAnswer(selectedIndex) {
+            userAnswers[currentQuestion] = selectedIndex;
+            showResult(selectedIndex);
+        }
+
+        function showResult(selectedIndex) {
+            const question = quizData.questions[currentQuestion];
+            const resultDiv = document.getElementById('result');
+            const letters = ['A', 'B', 'C', 'D'];
+            
+            if (selectedIndex === question.correctAnswer) {
+                resultDiv.innerHTML = `你的答案: <strong>${letters[selectedIndex]}</strong>. 正確!`;
+                if (question.explanation) {
+                    resultDiv.innerHTML += `<br><br>解釋: ${question.explanation}`;
+                }
+                resultDiv.style.color = 'green';
+                document.querySelectorAll('#options button').forEach((button, index) => {
+                    button.disabled = true;
+                    if (index === selectedIndex) {
+                        button.style.backgroundColor = 'lightgreen';
+                    }
+                });
+            } else {
+                resultDiv.innerHTML = `你的答案: <strong>${letters[selectedIndex]}</strong>. 請再試一次。`;
+                resultDiv.style.color = 'black';
+                document.querySelectorAll('#options button').forEach((button, index) => {
+                    if (index === selectedIndex) {
+                        button.style.backgroundColor = 'lightgray';
+                    }
+                });
+            }
+        }
+
+        document.getElementById('next').onclick = () => {
+            currentQuestion++;
+            if (currentQuestion < quizData.questions.length) {
+                loadQuestion();
+            } else {
+                endQuiz();
+            }
+        };
+
+        document.getElementById('prev').onclick = () => {
+            if (currentQuestion > 0) {
+                currentQuestion--;
+                loadQuestion();
+            }
+        };
+
+        function endQuiz() {
+            score = userAnswers.reduce((total, answer, index) => 
+                total + (answer === quizData.questions[index].correctAnswer ? 1 : 0), 0);
+            const totalQuestions = quizData.questions.length;
+            document.getElementById('questionNumber').textContent = '';
+            document.getElementById('question').textContent = '測驗結束!';
+            document.getElementById('options').innerHTML = '';
+            document.getElementById('result').textContent = '';
+            document.getElementById('navigation').style.display = 'none';
+            document.getElementById('score').textContent = `你的分數: ${score} / ${totalQuestions}`;
+        }
+
+        // Initialize speech recognition
+        function initSpeechRecognition() {
+            window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'zh-HK'; // Set language to Hong Kong Chinese
+            recognition.continuous = true;
+            recognition.interimResults = false;
+
+            recognition.onresult = function(event) {
+                const last = event.results.length - 1;
+                const command = event.results[last][0].transcript.trim().toUpperCase();
+
+                document.getElementById('voiceStatus').textContent = `語音命令: ${command}`;
+
+                if (['A', 'B', 'C', 'D', '1', '2', '3', '4'].includes(command)) {
+                    let index;
+                    if (['A', 'B', 'C', 'D'].includes(command)) {
+                        index = ['A', 'B', 'C', 'D'].indexOf(command);
+                    } else {
+                        index = parseInt(command) - 1;
+                    }
+                    checkAnswer(index);
+                } else if (['上一題', '上一個', '上題', '前一題', '返回'].includes(command)) {
+                    document.getElementById('prev').click();
+                } else if (['下一題', '下一個', '下題', '下一步', '繼續'].includes(command)) {
+                    document.getElementById('next').click();
+                }
+            };
+
+            recognition.onerror = function(event) {
+                console.error('Speech recognition error', event.error);
+                document.getElementById('voiceStatus').textContent = `語音識別錯誤: ${event.error}`;
+            };
+        }
+
+        document.getElementById('startVoice').addEventListener('click', function() {
+            initSpeechRecognition();
+            recognition.start();
+            this.style.display = 'none';
+            document.getElementById('stopVoice').style.display = 'inline-block';
+            document.getElementById('voiceStatus').textContent = '語音控制已啟動';
+        });
+
+        document.getElementById('stopVoice').addEventListener('click', function() {
+            recognition.stop();
+            this.style.display = 'none';
+            document.getElementById('startVoice').style.display = 'inline-block';
+            document.getElementById('voiceStatus').textContent = '語音控制已停止';
+        });
     </script>
 </body>
 </html>
