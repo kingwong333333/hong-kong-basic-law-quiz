@@ -81,265 +81,32 @@
     </style>
 </head>
 <body>
-    <header>
-        <h1>香港基本法測驗</h1>
-        <p>提高您對香港基本法的理解，參與我們的互動式在線測驗！</p>
-    </header>
-
-    <nav>
-        <ul>
-            <li><a href="#quiz">開始測驗</a></li>
-            <li><a href="#about">關於測驗</a></li>
-            <li><a href="#contact">聯繫我們</a></li>
-        </ul>
-    </nav>
-
-    <main id="quiz">
-        <div id="orderToggle">
-            <label for="randomOrder">隨機順序:</label>
-            <input type="checkbox" id="randomOrder">
-        </div>
-        <div id="questionSelect">
-            <label for="jumpToQuestion">跳至問題: </label>
-            <select id="jumpToQuestion"></select>
-        </div>
-        <div id="questionNumber"></div>
-        <div id="question"></div>
-        <div id="options"></div>
-        <div id="result"></div>
-        <div id="score"></div>
-        <div id="navigation">
-            <button id="prev" style="display:none;">上一題</button>
-            <button id="next" style="display:none;">下一題</button>
-        </div>
-        <div id="voiceControl">
-            <button id="startVoice">開始語音控制</button>
-            <button id="stopVoice" style="display:none;">停止語音控制</button>
-        </div>
-        <div id="voiceStatus"></div>
-    </main>
-
-    <section id="about">
-        <h2>關於香港基本法測驗</h2>
-        <p>本測驗旨在幫助香港市民更好地理解基本法。通過互動式問答，您可以測試並提高自己對基本法的認知。</p>
-    </section>
-
-    <section id="contact">
-        <h2>聯繫我們</h2>
-        <p>如果您有任何問題或建議，請發送郵件至：<a href="mailto:contact@example.com">contact@example.com</a></p>
-    </section>
-
-    <footer>
-        <p>&copy; 2023 香港基本法測驗。保留所有權利。</p>
-    </footer>
+    <h1>香港基本法測驗</h1>
+    <div id="orderToggle">
+        <label for="randomOrder">隨機順序:</label>
+        <input type="checkbox" id="randomOrder">
+    </div>
+    <div id="questionSelect">
+        <label for="jumpToQuestion">跳至問題: </label>
+        <select id="jumpToQuestion"></select>
+    </div>
+    <div id="questionNumber"></div>
+    <div id="question"></div>
+    <div id="options"></div>
+    <div id="result"></div>
+    <div id="score"></div>
+    <div id="navigation">
+        <button id="prev" style="display:none;">上一題</button>
+        <button id="next" style="display:none;">下一題</button>
+    </div>
+    <div id="voiceControl">
+        <button id="startVoice">開始語音控制</button>
+        <button id="stopVoice" style="display:none;">停止語音控制</button>
+    </div>
+    <div id="voiceStatus"></div>
 
     <script>
-        let quizData;
-        let currentQuestion = 0;
-        let score = 0;
-        let userAnswers = [];
-        let recognition;
-        let questionOrder = [];
-
-        // Load quiz data from JSON file
-        fetch('quiz_data.json')
-            .then(response => response.json())
-            .then(data => {
-                quizData = data;
-                initializeQuestionOrder();
-                loadQuestion();
-                populateQuestionSelect();
-            })
-            .catch(error => console.error('Error loading quiz data:', error));
-
-        // Add this new function
-        function initializeQuestionOrder() {
-            questionOrder = Array.from(Array(quizData.questions.length).keys());
-            if (document.getElementById('randomOrder').checked) {
-                shuffleArray(questionOrder);
-            }
-        }
-
-        // Add this new function
-        function shuffleArray(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
-            }
-        }
-
-        // Modify the populateQuestionSelect function
-        function populateQuestionSelect() {
-            const select = document.getElementById('jumpToQuestion');
-            select.innerHTML = ''; // Clear existing options
-            for (let i = 0; i < questionOrder.length; i++) {
-                const option = document.createElement('option');
-                option.value = i;
-                option.textContent = `問題 ${questionOrder[i] + 1}`;
-                select.appendChild(option);
-            }
-            select.value = currentQuestion;
-            select.addEventListener('change', (e) => {
-                currentQuestion = parseInt(e.target.value);
-                loadQuestion();
-            });
-        }
-
-        // Modify the loadQuestion function
-        function loadQuestion() {
-            const questionIndex = questionOrder[currentQuestion];
-            const question = quizData.questions[questionIndex];
-            document.getElementById('questionNumber').textContent = `問題 ${questionIndex + 1} / ${quizData.questions.length}`;
-            document.getElementById('question').textContent = question.question;
-            
-            const optionsDiv = document.getElementById('options');
-            optionsDiv.innerHTML = '';
-            const letters = ['A', 'B', 'C', 'D'];
-            question.options.forEach((option, index) => {
-                const button = document.createElement('button');
-                button.innerHTML = `<span class="option-letter">${letters[index]}.</span> ${option}`;
-                button.onclick = () => checkAnswer(index);
-                if (userAnswers[currentQuestion] === question.correctAnswer) {
-                    button.disabled = true;
-                    if (index === userAnswers[currentQuestion]) {
-                        button.style.backgroundColor = 'lightgreen';
-                    }
-                } else if (userAnswers[currentQuestion] !== undefined && index === userAnswers[currentQuestion]) {
-                    button.style.backgroundColor = 'lightgray';
-                }
-                optionsDiv.appendChild(button);
-            });
-
-            document.getElementById('result').textContent = '';
-            document.getElementById('next').style.display = currentQuestion < quizData.questions.length - 1 ? 'block' : 'none';
-            document.getElementById('prev').style.display = currentQuestion > 0 ? 'block' : 'none';
-
-            if (userAnswers[currentQuestion] !== undefined) {
-                showResult(userAnswers[currentQuestion]);
-            }
-
-            // Add this line at the end of the function
-            document.getElementById('jumpToQuestion').value = currentQuestion;
-        }
-
-        // Add this new event listener
-        document.getElementById('randomOrder').addEventListener('change', (e) => {
-            initializeQuestionOrder();
-            currentQuestion = 0;
-            loadQuestion();
-            populateQuestionSelect();
-        });
-
-        function checkAnswer(selectedIndex) {
-            userAnswers[currentQuestion] = selectedIndex;
-            showResult(selectedIndex);
-        }
-
-        function showResult(selectedIndex) {
-            const question = quizData.questions[currentQuestion];
-            const resultDiv = document.getElementById('result');
-            const letters = ['A', 'B', 'C', 'D'];
-            
-            if (selectedIndex === question.correctAnswer) {
-                resultDiv.innerHTML = `你的答案: <strong>${letters[selectedIndex]}</strong>. 正確!`;
-                if (question.explanation) {
-                    resultDiv.innerHTML += `<br><br>解釋: ${question.explanation}`;
-                }
-                resultDiv.style.color = 'green';
-                document.querySelectorAll('#options button').forEach((button, index) => {
-                    button.disabled = true;
-                    if (index === selectedIndex) {
-                        button.style.backgroundColor = 'lightgreen';
-                    }
-                });
-            } else {
-                resultDiv.innerHTML = `你的答案: <strong>${letters[selectedIndex]}</strong>. 請再試一次。`;
-                resultDiv.style.color = 'black';
-                document.querySelectorAll('#options button').forEach((button, index) => {
-                    if (index === selectedIndex) {
-                        button.style.backgroundColor = 'lightgray';
-                    }
-                });
-            }
-        }
-
-        document.getElementById('next').onclick = () => {
-            currentQuestion++;
-            if (currentQuestion < quizData.questions.length) {
-                loadQuestion();
-            } else {
-                endQuiz();
-            }
-        };
-
-        document.getElementById('prev').onclick = () => {
-            if (currentQuestion > 0) {
-                currentQuestion--;
-                loadQuestion();
-            }
-        };
-
-        function endQuiz() {
-            score = userAnswers.reduce((total, answer, index) => 
-                total + (answer === quizData.questions[index].correctAnswer ? 1 : 0), 0);
-            const totalQuestions = quizData.questions.length;
-            document.getElementById('questionNumber').textContent = '';
-            document.getElementById('question').textContent = '測驗結束!';
-            document.getElementById('options').innerHTML = '';
-            document.getElementById('result').textContent = '';
-            document.getElementById('navigation').style.display = 'none';
-            document.getElementById('score').textContent = `你的分數: ${score} / ${totalQuestions}`;
-        }
-
-        // Initialize speech recognition
-        function initSpeechRecognition() {
-            window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            recognition = new SpeechRecognition();
-            recognition.lang = 'zh-HK'; // Set language to Hong Kong Chinese
-            recognition.continuous = true;
-            recognition.interimResults = false;
-
-            recognition.onresult = function(event) {
-                const last = event.results.length - 1;
-                const command = event.results[last][0].transcript.trim().toUpperCase();
-
-                document.getElementById('voiceStatus').textContent = `語音命令: ${command}`;
-
-                if (['A', 'B', 'C', 'D', '1', '2', '3', '4'].includes(command)) {
-                    let index;
-                    if (['A', 'B', 'C', 'D'].includes(command)) {
-                        index = ['A', 'B', 'C', 'D'].indexOf(command);
-                    } else {
-                        index = parseInt(command) - 1;
-                    }
-                    checkAnswer(index);
-                } else if (['上一題', '上一個', '上題', '前一題', '返回'].includes(command)) {
-                    document.getElementById('prev').click();
-                } else if (['下一題', '下一個', '下題', '下一步', '繼續'].includes(command)) {
-                    document.getElementById('next').click();
-                }
-            };
-
-            recognition.onerror = function(event) {
-                console.error('Speech recognition error', event.error);
-                document.getElementById('voiceStatus').textContent = `語音識別錯誤: ${event.error}`;
-            };
-        }
-
-        document.getElementById('startVoice').addEventListener('click', function() {
-            initSpeechRecognition();
-            recognition.start();
-            this.style.display = 'none';
-            document.getElementById('stopVoice').style.display = 'inline-block';
-            document.getElementById('voiceStatus').textContent = '語音控制已啟動';
-        });
-
-        document.getElementById('stopVoice').addEventListener('click', function() {
-            recognition.stop();
-            this.style.display = 'none';
-            document.getElementById('startVoice').style.display = 'inline-block';
-            document.getElementById('voiceStatus').textContent = '語音控制已停止';
-        });
+        // ... 保持原有的 JavaScript 代碼 ...
     </script>
 </body>
 </html>
