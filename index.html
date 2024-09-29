@@ -28,11 +28,22 @@
             grid-template-columns: 1fr 1fr;
             gap: 10px;
         }
-        button {
+        .option-button {
             padding: 10px;
             font-size: 1em;
             cursor: pointer;
             text-align: left;
+            background-color: white;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+        }
+        .option-button.correct {
+            border-color: green;
+            color: green;
+        }
+        .option-button.incorrect {
+            border-color: red;
+            color: red;
         }
         #result {
             margin-top: 20px;
@@ -44,19 +55,24 @@
         }
         #navigation {
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-end;  /* Changed to align to the right */
             margin-top: 20px;
         }
-        #prev {
-            order: 1;
+        #prev, #next {
+            padding: 6px;
+            font-size: 1em;
+            cursor: pointer;
         }
-        #next {
-            order: 2;
-            margin-left: auto;
-        }
-        #voiceStatus {
+        #voiceControl {
+            display: flex;
+            gap: 10px;
             margin-top: 20px;
-            font-style: italic;
+        }
+        #voiceControl button {
+            padding: 10px;
+            font-size: 1em;
+            cursor: pointer;
+            margin-bottom: 10px; 
         }
         .option-letter {
             font-weight: bold;
@@ -86,16 +102,6 @@
         .disclaimer h3 {
             margin-top: 0;
             color: #333;
-        }
-        #voiceControl {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-        #voiceControl button {
-            padding: 10px;
-            font-size: 1em;
-            cursor: pointer;
         }
     </style>
 </head>
@@ -190,29 +196,32 @@
             const letters = ['A', 'B', 'C', 'D'];
             question.options.forEach((option, index) => {
                 const button = document.createElement('button');
+                button.className = 'option-button';
                 button.innerHTML = `<span class="option-letter">${letters[index]}.</span> ${option}`;
                 button.onclick = () => checkAnswer(index);
-                if (userAnswers[currentQuestion] === question.correctAnswer) {
-                    button.disabled = true;
-                    if (index === userAnswers[currentQuestion]) {
-                        button.style.backgroundColor = 'lightgreen';
-                    }
-                } else if (userAnswers[currentQuestion] !== undefined && index === userAnswers[currentQuestion]) {
-                    button.style.backgroundColor = 'lightgray';
-                }
                 optionsDiv.appendChild(button);
             });
 
             document.getElementById('result').textContent = '';
-            document.getElementById('next').style.display = currentQuestion < quizData.questions.length - 1 ? 'block' : 'none';
-            document.getElementById('prev').style.display = currentQuestion > 0 ? 'block' : 'none';
+            document.getElementById('next').style.display = currentQuestion < quizData.questions.length - 1 ? 'inline-block' : 'none';
+            document.getElementById('prev').style.display = currentQuestion > 0 ? 'inline-block' : 'none';
 
-            if (userAnswers[currentQuestion] !== undefined) {
-                showResult(userAnswers[currentQuestion]);
-            }
+            // Reset any previous answer styling
+            document.querySelectorAll('.option-button').forEach(button => {
+                button.classList.remove('correct', 'incorrect');
+            });
 
-            // Add this line at the end of the function
             document.getElementById('jumpToQuestion').value = currentQuestion;
+
+            const isFirstQuestion = currentQuestion === 0;
+            const isLastQuestion = currentQuestion === quizData.questions.length - 1;
+
+            document.getElementById('next').style.display = !isLastQuestion ? 'inline-block' : 'none';
+            document.getElementById('prev').style.display = !isFirstQuestion ? 'inline-block' : 'none';
+
+            // Adjust navigation layout based on question number
+            const navigationDiv = document.getElementById('navigation');
+            navigationDiv.style.justifyContent = isFirstQuestion ? 'flex-end' : 'space-between';
         }
 
         // Add this new event listener
@@ -224,35 +233,43 @@
         });
 
         function checkAnswer(selectedIndex) {
-            userAnswers[currentQuestion] = selectedIndex;
+            const question = quizData.questions[questionOrder[currentQuestion]];
+            const buttons = document.querySelectorAll('.option-button');
+            
+            buttons.forEach((button, index) => {
+                button.disabled = true;
+                if (index === selectedIndex) {
+                    if (selectedIndex === question.correctAnswer) {
+                        button.classList.add('correct');
+                    } else {
+                        button.classList.add('incorrect');
+                    }
+                }
+                if (index === question.correctAnswer) {
+                    button.classList.add('correct');
+                }
+            });
+
             showResult(selectedIndex);
         }
 
         function showResult(selectedIndex) {
-            const question = quizData.questions[currentQuestion];
+            const question = quizData.questions[questionOrder[currentQuestion]];
             const resultDiv = document.getElementById('result');
             const letters = ['A', 'B', 'C', 'D'];
             
             if (selectedIndex === question.correctAnswer) {
-                resultDiv.innerHTML = `你的答案: <strong>${letters[selectedIndex]}</strong>. 正確!`;
+                resultDiv.innerHTML = `正確答案: <strong>${letters[selectedIndex]}</strong>`;
                 if (question.explanation) {
                     resultDiv.innerHTML += `<br><br>解釋: ${question.explanation}`;
                 }
                 resultDiv.style.color = 'green';
-                document.querySelectorAll('#options button').forEach((button, index) => {
-                    button.disabled = true;
-                    if (index === selectedIndex) {
-                        button.style.backgroundColor = 'lightgreen';
-                    }
-                });
             } else {
-                resultDiv.innerHTML = `你的答案: <strong>${letters[selectedIndex]}</strong>. 請再試一次。`;
+                resultDiv.innerHTML = `正確答案: <strong>${letters[question.correctAnswer]}</strong>`;
+                if (question.explanation) {
+                    resultDiv.innerHTML += `<br><br>解釋: ${question.explanation}`;
+                }
                 resultDiv.style.color = 'black';
-                document.querySelectorAll('#options button').forEach((button, index) => {
-                    if (index === selectedIndex) {
-                        button.style.backgroundColor = 'lightgray';
-                    }
-                });
             }
         }
 
