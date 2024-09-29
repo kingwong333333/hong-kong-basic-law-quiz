@@ -3,9 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>香港基本法測驗</title>
+    <title>香港基本法測驗 - 在線互動式測試</title>
+    <meta name="description" content="免費在線香港基本法測驗。通過互動式問答提高您對香港基本法的理解。包含語音控制功能。">
+    <meta name="keywords" content="香港基本法, 測驗, 在線測試, 互動式學習, 語音控制">
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2137466363023201"
      crossorigin="anonymous"></script>
+    <link rel="canonical" href="https://kingwong333333.github.io/">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -77,29 +80,57 @@
     </style>
 </head>
 <body>
-    <h1>香港基本法測驗</h1>
-    <div id="orderToggle">
-        <label for="randomOrder">隨機順序:</label>
-        <input type="checkbox" id="randomOrder">
-    </div>
-    <div id="questionSelect">
-        <label for="jumpToQuestion">跳至問題: </label>
-        <select id="jumpToQuestion"></select>
-    </div>
-    <div id="questionNumber"></div>
-    <div id="question"></div>
-    <div id="options"></div>
-    <div id="result"></div>
-    <div id="score"></div>
-    <div id="navigation">
-        <button id="prev" style="display:none;">上一題</button>
-        <button id="next" style="display:none;">下一題</button>
-    </div>
-    <div id="voiceControl">
-        <button id="startVoice">開始語音控制</button>
-        <button id="stopVoice" style="display:none;">停止語音控制</button>
-    </div>
-    <div id="voiceStatus"></div>
+    <header>
+        <h1>香港基本法測驗</h1>
+        <p>提高您對香港基本法的理解，參與我們的互動式在線測驗！</p>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="#quiz">開始測驗</a></li>
+            <li><a href="#about">關於測驗</a></li>
+            <li><a href="#contact">聯繫我們</a></li>
+        </ul>
+    </nav>
+
+    <main id="quiz">
+        <div id="orderToggle">
+            <label for="randomOrder">隨機順序:</label>
+            <input type="checkbox" id="randomOrder">
+        </div>
+        <div id="questionSelect">
+            <label for="jumpToQuestion">跳至問題: </label>
+            <select id="jumpToQuestion"></select>
+        </div>
+        <div id="questionNumber"></div>
+        <div id="question"></div>
+        <div id="options"></div>
+        <div id="result"></div>
+        <div id="score"></div>
+        <div id="navigation">
+            <button id="prev" style="display:none;">上一題</button>
+            <button id="next" style="display:none;">下一題</button>
+        </div>
+        <div id="voiceControl">
+            <button id="startVoice">開始語音控制</button>
+            <button id="stopVoice" style="display:none;">停止語音控制</button>
+        </div>
+        <div id="voiceStatus"></div>
+    </main>
+
+    <section id="about">
+        <h2>關於香港基本法測驗</h2>
+        <p>本測驗旨在幫助香港市民更好地理解基本法。通過互動式問答，您可以測試並提高自己對基本法的認知。</p>
+    </section>
+
+    <section id="contact">
+        <h2>聯繫我們</h2>
+        <p>如果您有任何問題或建議，請發送郵件至：<a href="mailto:contact@example.com">contact@example.com</a></p>
+    </section>
+
+    <footer>
+        <p>&copy; 2023 香港基本法測驗。保留所有權利。</p>
+    </footer>
 
     <script>
         let quizData;
